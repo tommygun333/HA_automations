@@ -1,0 +1,557 @@
+- alias: Homatics Auto Power Control
+  description: Dual-boot aware power management
+  mode: queued
+  max: 3
+  triggers:
+  - trigger: state
+    entity_id: media_player.home_theater_2
+    to: 'on'
+    for:
+      seconds: 2
+    id: avr_on
+  - trigger: state
+    entity_id: media_player.home_theater_2
+    to: 'off'
+    for:
+      seconds: 2
+    id: avr_off
+  - trigger: state
+    entity_id: media_player.home_theater_2
+    attribute: source
+    for:
+      seconds: 1
+    id: input_change
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: avr_on
+      - condition: state
+        entity_id: media_player.home_theater_2
+        attribute: source
+        state: HOMATIC
+      sequence:
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: "{{ states('media_player.box_r_4k_plus_2') == 'unavailable'\n
+              \  and states('sensor.coreelec_state') in ['sleep','awake','coreelec_started']
+              }}"
+          sequence:
+          - choose:
+            - conditions:
+              - condition: state
+                entity_id: input_select.preferred_os
+                state: CoreELEC
+              sequence:
+              - repeat:
+                  count: 3
+                  sequence:
+                  - if:
+                    - condition: template
+                      value_template: '{{ states(''sensor.coreelec_state'') == ''awake''
+                        }}'
+                    then:
+                    - stop: CoreELEC already awake
+                  - action: mqtt.publish
+                    data:
+                      topic: coreelec/cmd
+                      payload: wake
+                  - wait_for_trigger:
+                    - trigger: state
+                      entity_id: sensor.coreelec_state
+                      to: awake
+                    timeout:
+                      seconds: 15
+                    continue_on_timeout: true
+                  - if:
+                    - condition: template
+                      value_template: '{{ wait.completed }}'
+                    then:
+                    - stop: CoreELEC wake confirmed
+                  - delay:
+                      seconds: 5
+            - conditions:
+              - condition: state
+                entity_id: input_select.preferred_os
+                state: Android
+              sequence:
+              - stop: Prefer Android but CoreELEC active — leaving as is
+            default:
+            - stop: Unknown OS preference — leaving as is
+        - conditions:
+          - condition: template
+            value_template: '{{ states(''media_player.box_r_4k_plus_2'') in [''on'',''off'']
+              }}'
+          sequence:
+          - choose:
+            - conditions:
+              - condition: state
+                entity_id: input_select.preferred_os
+                state: Android
+              sequence:
+              - repeat:
+                  count: 3
+                  sequence:
+                  - if:
+                    - condition: state
+                      entity_id: media_player.box_r_4k_plus_2
+                      state: 'on'
+                    then:
+                    - stop: Android already on
+                  - action: media_player.turn_on
+                    target:
+                      entity_id: media_player.box_r_4k_plus_2
+                  - wait_for_trigger:
+                    - trigger: state
+                      entity_id: media_player.box_r_4k_plus_2
+                      to: 'on'
+                    timeout:
+                      seconds: 15
+                    continue_on_timeout: true
+                  - if:
+                    - condition: template
+                      value_template: '{{ wait.completed }}'
+                    then:
+                    - stop: Android wake confirmed
+                  - delay:
+                      seconds: 5
+            - conditions:
+              - condition: state
+                entity_id: input_select.preferred_os
+                state: CoreELEC
+              sequence:
+              - stop: Prefer CoreELEC but Android active — leaving as is
+            default:
+            - stop: Unknown OS preference — leaving as is
+        default:
+        - action: mqtt.publish
+          data:
+            topic: coreelec/cmd
+            payload: wake
+        - action: media_player.turn_on
+          target:
+            entity_id: media_player.box_r_4k_plus_2
+    - conditions:
+      - condition: trigger
+        id: avr_off
+      sequence:
+      - delay:
+          seconds: 5
+      - if:
+        - condition: state
+          entity_id: binary_sensor.192_168_1_132
+          state: 'off'
+        then:
+        - delay:
+            seconds: 15
+        - if:
+          - condition: state
+            entity_id: binary_sensor.192_168_1_132
+            state: 'off'
+          then:
+          - stop: AVR not reachable via ping after retry — cancelling to protect box
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: "{{ states('media_player.box_r_4k_plus_2') == 'unavailable'\n
+              \  and states('sensor.coreelec_state') in ['sleep','awake','coreelec_started']
+              }}"
+          sequence:
+          - choose:
+            - conditions:
+              - condition: state
+                entity_id: input_select.preferred_os
+                state: CoreELEC
+              sequence:
+              - repeat:
+                  count: 3
+                  sequence:
+                  - if:
+                    - condition: template
+                      value_template: '{{ states(''sensor.coreelec_state'') == ''sleep''
+                        }}'
+                    then:
+                    - stop: CoreELEC already sleeping
+                  - if:
+                    - condition: state
+                      entity_id: media_player.home_theater_2
+                      state: 'on'
+                    - condition: state
+                      entity_id: media_player.home_theater_2
+                      attribute: source
+                      state: HOMATIC
+                    then:
+                    - stop: AVR back on with HOMATIC — cancelling CoreELEC sleep
+                  - action: mqtt.publish
+                    data:
+                      topic: coreelec/cmd
+                      payload: sleep
+                  - wait_for_trigger:
+                    - trigger: state
+                      entity_id: sensor.coreelec_state
+                      to: sleep
+                    timeout:
+                      seconds: 15
+                    continue_on_timeout: true
+                  - if:
+                    - condition: template
+                      value_template: '{{ wait.completed }}'
+                    then:
+                    - stop: CoreELEC sleep confirmed
+                  - delay:
+                      seconds: 5
+            - conditions:
+              - condition: state
+                entity_id: input_select.preferred_os
+                state: Android
+              sequence:
+              - delay:
+                  seconds: 10
+              - if:
+                - condition: state
+                  entity_id: media_player.home_theater_2
+                  state: 'on'
+                then:
+                - stop: AVR turned back on within 10s — cancelling OS switch
+              - action: mqtt.publish
+                data:
+                  topic: coreelec/cmd
+                  payload: reboot_android_mqtt
+              - wait_for_trigger:
+                - trigger: state
+                  entity_id: media_player.box_r_4k_plus_2
+                  to: 'on'
+                timeout:
+                  seconds: 120
+                continue_on_timeout: true
+              - if:
+                - condition: template
+                  value_template: '{{ not wait.completed }}'
+                then:
+                - stop: Android did not boot within timeout after CoreELEC reboot
+              - delay:
+                  seconds: 3
+              - repeat:
+                  count: 3
+                  sequence:
+                  - if:
+                    - condition: state
+                      entity_id: media_player.box_r_4k_plus_2
+                      state: 'off'
+                    then:
+                    - stop: Android already sleeping
+                  - action: media_player.turn_off
+                    target:
+                      entity_id: media_player.box_r_4k_plus_2
+                  - wait_for_trigger:
+                    - trigger: state
+                      entity_id: media_player.box_r_4k_plus_2
+                      to: 'off'
+                    timeout:
+                      seconds: 15
+                    continue_on_timeout: true
+                  - if:
+                    - condition: template
+                      value_template: '{{ wait.completed }}'
+                    then:
+                    - stop: Android sleep confirmed after CoreELEC reboot
+                  - delay:
+                      seconds: 5
+            default:
+            - action: mqtt.publish
+              data:
+                topic: coreelec/cmd
+                payload: sleep
+            - action: media_player.turn_off
+              target:
+                entity_id: media_player.box_r_4k_plus_2
+        - conditions:
+          - condition: template
+            value_template: '{{ states(''media_player.box_r_4k_plus_2'') in [''on'',''off'']
+              }}'
+          sequence:
+          - choose:
+            - conditions:
+              - condition: state
+                entity_id: input_select.preferred_os
+                state: Android
+              sequence:
+              - repeat:
+                  count: 3
+                  sequence:
+                  - if:
+                    - condition: state
+                      entity_id: media_player.box_r_4k_plus_2
+                      state: 'off'
+                    then:
+                    - stop: Android already sleeping
+                  - if:
+                    - condition: state
+                      entity_id: media_player.home_theater_2
+                      state: 'on'
+                    - condition: state
+                      entity_id: media_player.home_theater_2
+                      attribute: source
+                      state: HOMATIC
+                    then:
+                    - stop: AVR back on with HOMATIC — cancelling Android sleep
+                  - action: media_player.turn_off
+                    target:
+                      entity_id: media_player.box_r_4k_plus_2
+                  - wait_for_trigger:
+                    - trigger: state
+                      entity_id: media_player.box_r_4k_plus_2
+                      to: 'off'
+                    timeout:
+                      seconds: 15
+                    continue_on_timeout: true
+                  - if:
+                    - condition: template
+                      value_template: '{{ wait.completed }}'
+                    then:
+                    - stop: Android sleep confirmed
+                  - delay:
+                      seconds: 5
+            - conditions:
+              - condition: state
+                entity_id: input_select.preferred_os
+                state: CoreELEC
+              sequence:
+              - delay:
+                  seconds: 10
+              - if:
+                - condition: state
+                  entity_id: media_player.home_theater_2
+                  state: 'on'
+                then:
+                - stop: AVR turned back on within 10s — cancelling OS switch
+              - action: androidtv.adb_command
+                target:
+                  device_id: 980c3abbad2a9822927b83081dafc5f9
+                data:
+                  command: reboot
+              - wait_for_trigger:
+                - trigger: state
+                  entity_id: sensor.coreelec_state
+                  to: coreelec_started
+                timeout:
+                  seconds: 120
+                continue_on_timeout: true
+              - if:
+                - condition: template
+                  value_template: '{{ not wait.completed }}'
+                then:
+                - stop: CoreELEC did not boot within timeout after Android reboot
+              - delay:
+                  seconds: 5
+              - repeat:
+                  count: 3
+                  sequence:
+                  - if:
+                    - condition: template
+                      value_template: '{{ states(''sensor.coreelec_state'') == ''sleep''
+                        }}'
+                    then:
+                    - stop: CoreELEC already sleeping
+                  - action: mqtt.publish
+                    data:
+                      topic: coreelec/cmd
+                      payload: sleep
+                  - wait_for_trigger:
+                    - trigger: state
+                      entity_id: sensor.coreelec_state
+                      to: sleep
+                    timeout:
+                      seconds: 15
+                    continue_on_timeout: true
+                  - if:
+                    - condition: template
+                      value_template: '{{ wait.completed }}'
+                    then:
+                    - stop: CoreELEC sleep confirmed after Android reboot
+                  - delay:
+                      seconds: 5
+            default:
+            - action: mqtt.publish
+              data:
+                topic: coreelec/cmd
+                payload: sleep
+            - action: media_player.turn_off
+              target:
+                entity_id: media_player.box_r_4k_plus_2
+        default:
+        - action: mqtt.publish
+          data:
+            topic: coreelec/cmd
+            payload: sleep
+        - action: media_player.turn_off
+          target:
+            entity_id: media_player.box_r_4k_plus_2
+    - conditions:
+      - condition: trigger
+        id: input_change
+      sequence:
+      - choose:
+        - conditions:
+          - condition: state
+            entity_id: media_player.home_theater_2
+            state: 'on'
+          - condition: state
+            entity_id: media_player.home_theater_2
+            attribute: source
+            state: HOMATIC
+          sequence:
+          - choose:
+            - conditions:
+              - condition: template
+                value_template: "{{ states('media_player.box_r_4k_plus_2') == 'unavailable'\n
+                  \  and states('sensor.coreelec_state') in ['sleep','awake','coreelec_started']
+                  }}"
+              sequence:
+              - repeat:
+                  count: 3
+                  sequence:
+                  - if:
+                    - condition: template
+                      value_template: '{{ states(''sensor.coreelec_state'') == ''awake''
+                        }}'
+                    then:
+                    - stop: CoreELEC already awake
+                  - action: mqtt.publish
+                    data:
+                      topic: coreelec/cmd
+                      payload: wake
+                  - wait_for_trigger:
+                    - trigger: state
+                      entity_id: sensor.coreelec_state
+                      to: awake
+                    timeout:
+                      seconds: 15
+                    continue_on_timeout: true
+                  - if:
+                    - condition: template
+                      value_template: '{{ wait.completed }}'
+                    then:
+                    - stop: CoreELEC wake confirmed on input switch to HOMATIC
+                  - delay:
+                      seconds: 5
+            - conditions:
+              - condition: template
+                value_template: '{{ states(''media_player.box_r_4k_plus_2'') in [''on'',''off'']
+                  }}'
+              sequence:
+              - repeat:
+                  count: 3
+                  sequence:
+                  - if:
+                    - condition: state
+                      entity_id: media_player.box_r_4k_plus_2
+                      state: 'on'
+                    then:
+                    - stop: Android already on
+                  - action: media_player.turn_on
+                    target:
+                      entity_id: media_player.box_r_4k_plus_2
+                  - wait_for_trigger:
+                    - trigger: state
+                      entity_id: media_player.box_r_4k_plus_2
+                      to: 'on'
+                    timeout:
+                      seconds: 15
+                    continue_on_timeout: true
+                  - if:
+                    - condition: template
+                      value_template: '{{ wait.completed }}'
+                    then:
+                    - stop: Android wake confirmed on input switch to HOMATIC
+                  - delay:
+                      seconds: 5
+            default:
+            - action: mqtt.publish
+              data:
+                topic: coreelec/cmd
+                payload: wake
+            - action: media_player.turn_on
+              target:
+                entity_id: media_player.box_r_4k_plus_2
+        default:
+        - if:
+          - condition: state
+            entity_id: media_player.home_theater_2
+            state: 'off'
+          then:
+          - stop: AVR already off — avr_off trigger will handle shutdown
+        - choose:
+          - conditions:
+            - condition: template
+              value_template: "{{ states('media_player.box_r_4k_plus_2') == 'unavailable'\n
+                \  and states('sensor.coreelec_state') in ['sleep','awake','coreelec_started']
+                }}"
+            sequence:
+            - repeat:
+                count: 3
+                sequence:
+                - if:
+                  - condition: template
+                    value_template: '{{ states(''sensor.coreelec_state'') == ''sleep''
+                      }}'
+                  then:
+                  - stop: CoreELEC already sleeping
+                - action: mqtt.publish
+                  data:
+                    topic: coreelec/cmd
+                    payload: sleep
+                - wait_for_trigger:
+                  - trigger: state
+                    entity_id: sensor.coreelec_state
+                    to: sleep
+                  timeout:
+                    seconds: 15
+                  continue_on_timeout: true
+                - if:
+                  - condition: template
+                    value_template: '{{ wait.completed }}'
+                  then:
+                  - stop: CoreELEC sleep confirmed on input switch away from HOMATIC
+                - delay:
+                    seconds: 5
+          - conditions:
+            - condition: template
+              value_template: '{{ states(''media_player.box_r_4k_plus_2'') in [''on'',''off'']
+                }}'
+            sequence:
+            - repeat:
+                count: 3
+                sequence:
+                - if:
+                  - condition: state
+                    entity_id: media_player.box_r_4k_plus_2
+                    state: 'off'
+                  then:
+                  - stop: Android already sleeping
+                - action: media_player.turn_off
+                  target:
+                    entity_id: media_player.box_r_4k_plus_2
+                - wait_for_trigger:
+                  - trigger: state
+                    entity_id: media_player.box_r_4k_plus_2
+                    to: 'off'
+                  timeout:
+                    seconds: 15
+                  continue_on_timeout: true
+                - if:
+                  - condition: template
+                    value_template: '{{ wait.completed }}'
+                  then:
+                  - stop: Android sleep confirmed on input switch away from HOMATIC
+                - delay:
+                    seconds: 5
+          default:
+          - action: mqtt.publish
+            data:
+              topic: coreelec/cmd
+              payload: sleep
+          - action: media_player.turn_off
+            target:
+              entity_id: media_player.box_r_4k_plus_2
