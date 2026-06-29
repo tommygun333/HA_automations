@@ -1,22 +1,22 @@
-- alias: Homatics Auto Power Control
+- alias: Media Players Auto Power Control
   description: Dual-boot aware power management
   mode: queued
   max: 3
   triggers:
   - trigger: state
-    entity_id: media_player.home_theater_2
+    entity_id: media_player.denon_denon_avr_s960h
     to: 'on'
     for:
       seconds: 2
     id: avr_on
   - trigger: state
-    entity_id: media_player.home_theater_2
+    entity_id: media_player.denon_denon_avr_s960h
     to: 'off'
     for:
       seconds: 2
     id: avr_off
   - trigger: state
-    entity_id: media_player.home_theater_2
+    entity_id: media_player.denon_denon_avr_s960h
     attribute: source
     for:
       seconds: 1
@@ -27,9 +27,9 @@
       - condition: trigger
         id: avr_on
       - condition: state
-        entity_id: media_player.home_theater_2
+        entity_id: media_player.denon_denon_avr_s960h
         attribute: source
-        state: HOMATIC
+        state: Media Player
       sequence:
       - choose:
         - conditions:
@@ -175,14 +175,14 @@
                     - stop: CoreELEC already sleeping
                   - if:
                     - condition: state
-                      entity_id: media_player.home_theater_2
+                      entity_id: media_player.denon_denon_avr_s960h
                       state: 'on'
                     - condition: state
-                      entity_id: media_player.home_theater_2
+                      entity_id: media_player.denon_denon_avr_s960h
                       attribute: source
-                      state: HOMATIC
+                      state: Media Player
                     then:
-                    - stop: AVR back on with HOMATIC — cancelling CoreELEC sleep
+                    - stop: AVR back on with Media Player — cancelling CoreELEC sleep
                   - action: mqtt.publish
                     data:
                       topic: coreelec/cmd
@@ -210,7 +210,7 @@
                   seconds: 10
               - if:
                 - condition: state
-                  entity_id: media_player.home_theater_2
+                  entity_id: media_player.denon_denon_avr_s960h
                   state: 'on'
                 then:
                 - stop: AVR turned back on within 10s — cancelling OS switch
@@ -288,14 +288,14 @@
                     - stop: Android already sleeping
                   - if:
                     - condition: state
-                      entity_id: media_player.home_theater_2
+                      entity_id: media_player.denon_denon_avr_s960h
                       state: 'on'
                     - condition: state
-                      entity_id: media_player.home_theater_2
+                      entity_id: media_player.denon_denon_avr_s960h
                       attribute: source
-                      state: HOMATIC
+                      state: Media Player
                     then:
-                    - stop: AVR back on with HOMATIC — cancelling Android sleep
+                    - stop: AVR back on with Media Player — cancelling Android sleep
                   - action: media_player.turn_off
                     target:
                       entity_id: media_player.box_r_4k_plus_2
@@ -322,7 +322,7 @@
                   seconds: 10
               - if:
                 - condition: state
-                  entity_id: media_player.home_theater_2
+                  entity_id: media_player.denon_denon_avr_s960h
                   state: 'on'
                 then:
                 - stop: AVR turned back on within 10s — cancelling OS switch
@@ -395,12 +395,12 @@
       - choose:
         - conditions:
           - condition: state
-            entity_id: media_player.home_theater_2
+            entity_id: media_player.denon_denon_avr_s960h
             state: 'on'
           - condition: state
-            entity_id: media_player.home_theater_2
+            entity_id: media_player.denon_denon_avr_s960h
             attribute: source
-            state: HOMATIC
+            state: Media Player
           sequence:
           - choose:
             - conditions:
@@ -433,7 +433,7 @@
                     - condition: template
                       value_template: '{{ wait.completed }}'
                     then:
-                    - stop: CoreELEC wake confirmed on input switch to HOMATIC
+                    - stop: CoreELEC wake confirmed on input switch to Media Player
                   - delay:
                       seconds: 5
             - conditions:
@@ -464,7 +464,7 @@
                     - condition: template
                       value_template: '{{ wait.completed }}'
                     then:
-                    - stop: Android wake confirmed on input switch to HOMATIC
+                    - stop: Android wake confirmed on input switch to Media Player
                   - delay:
                       seconds: 5
             default:
@@ -478,7 +478,7 @@
         default:
         - if:
           - condition: state
-            entity_id: media_player.home_theater_2
+            entity_id: media_player.denon_denon_avr_s960h
             state: 'off'
           then:
           - stop: AVR already off — avr_off trigger will handle shutdown
@@ -513,7 +513,7 @@
                   - condition: template
                     value_template: '{{ wait.completed }}'
                   then:
-                  - stop: CoreELEC sleep confirmed on input switch away from HOMATIC
+                  - stop: CoreELEC sleep confirmed on input switch away from Media Player
                 - delay:
                     seconds: 5
           - conditions:
@@ -544,7 +544,7 @@
                   - condition: template
                     value_template: '{{ wait.completed }}'
                   then:
-                  - stop: Android sleep confirmed on input switch away from HOMATIC
+                  - stop: Android sleep confirmed on input switch away from Media Player
                 - delay:
                     seconds: 5
           default:
