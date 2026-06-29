@@ -4,19 +4,19 @@
   max: 3
   triggers:
   - trigger: state
-    entity_id: media_player.denon_denon_avr_s960h
+    entity_id: sensor.denon_avr_raw_status
     to: 'on'
     for:
       seconds: 2
     id: avr_on
   - trigger: state
-    entity_id: media_player.denon_denon_avr_s960h
+    entity_id: sensor.denon_avr_raw_status
     to: 'off'
     for:
       seconds: 2
     id: avr_off
   - trigger: state
-    entity_id: media_player.denon_denon_avr_s960h
+    entity_id: sensor.denon_avr_raw_status
     attribute: source
     for:
       seconds: 1
@@ -27,9 +27,9 @@
       - condition: trigger
         id: avr_on
       - condition: state
-        entity_id: media_player.denon_denon_avr_s960h
+        entity_id: sensor.denon_avr_raw_status
         attribute: source
-        state: Media Player
+        state: MPLAY
       sequence:
       - choose:
         - conditions:
@@ -175,12 +175,12 @@
                     - stop: CoreELEC already sleeping
                   - if:
                     - condition: state
-                      entity_id: media_player.denon_denon_avr_s960h
+                      entity_id: sensor.denon_avr_raw_status
                       state: 'on'
                     - condition: state
-                      entity_id: media_player.denon_denon_avr_s960h
+                      entity_id: sensor.denon_avr_raw_status
                       attribute: source
-                      state: Media Player
+                      state: MPLAY
                     then:
                     - stop: AVR back on with Media Player — cancelling CoreELEC sleep
                   - action: mqtt.publish
@@ -210,7 +210,7 @@
                   seconds: 10
               - if:
                 - condition: state
-                  entity_id: media_player.denon_denon_avr_s960h
+                  entity_id: sensor.denon_avr_raw_status
                   state: 'on'
                 then:
                 - stop: AVR turned back on within 10s — cancelling OS switch
@@ -288,12 +288,12 @@
                     - stop: Android already sleeping
                   - if:
                     - condition: state
-                      entity_id: media_player.denon_denon_avr_s960h
+                      entity_id: sensor.denon_avr_raw_status
                       state: 'on'
                     - condition: state
-                      entity_id: media_player.denon_denon_avr_s960h
+                      entity_id: sensor.denon_avr_raw_status
                       attribute: source
-                      state: Media Player
+                      state: MPLAY
                     then:
                     - stop: AVR back on with Media Player — cancelling Android sleep
                   - action: media_player.turn_off
@@ -322,7 +322,7 @@
                   seconds: 10
               - if:
                 - condition: state
-                  entity_id: media_player.denon_denon_avr_s960h
+                  entity_id: sensor.denon_avr_raw_status
                   state: 'on'
                 then:
                 - stop: AVR turned back on within 10s — cancelling OS switch
@@ -395,12 +395,12 @@
       - choose:
         - conditions:
           - condition: state
-            entity_id: media_player.denon_denon_avr_s960h
+            entity_id: sensor.denon_avr_raw_status
             state: 'on'
           - condition: state
-            entity_id: media_player.denon_denon_avr_s960h
+            entity_id: sensor.denon_avr_raw_status
             attribute: source
-            state: Media Player
+            state: MPLAY
           sequence:
           - choose:
             - conditions:
@@ -478,7 +478,7 @@
         default:
         - if:
           - condition: state
-            entity_id: media_player.denon_denon_avr_s960h
+            entity_id: sensor.denon_avr_raw_status
             state: 'off'
           then:
           - stop: AVR already off — avr_off trigger will handle shutdown
